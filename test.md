@@ -1,258 +1,122 @@
 -- ─────────────────────────────────────────────────────────────
--- Full in-house feature comparison for 7 mismatch loans
--- Prod table vs Offline features table
+-- PROD_NOV_SAMPLE — full columns, hardcoded to 7 mismatch loans
 -- ─────────────────────────────────────────────────────────────
 
-WITH PROD AS (
-    SELECT
-        BUSINESS_LOAN_ID,
-        BUSINESS_APPLICATION_ID,
-        PL_USER_ID,
-        CYCLE_START_DATE                                    AS OBSERVATION_DATE,
-        SCORE                                               AS PROD_SCORE,
+CREATE OR REPLACE TEMPORARY TABLE TDM_RISK_MGMT_HUB_CLONE_PL5.MODELED.PROD_NOV_SAMPLE AS
 
-        -- In-house features available in prod table
-        ATT_SEASONING,
-        ATT_GROSS_INCOME,
-        ATT_PAST_DUE_TO_SCHD,
-        ATT_COBORROWER_IND,
-        ATT_IS_AUTOPAY,
-        ATT_IS_DUE_CHG,
-        ATT_ORIG_GROSS_INT_RATE,
-        ATT_ORIGINAL_PRIN,
-        ATT_UBTI,
-        ATT_PAST_DUE_TO_INCOME,
-        ATT_REMAINING_BAL_RATIO,
-        ATT_TOT_DQ_DAYS_CYC_RATIO_L1M,
-        ATT_TOT_DQ_DAYS_CYC_RATIO_L3M,
-        ATT_TOT_DQ_DAYS_CYC_RATIO_L6M,
-        ATT_CONS_NODQCNT,
-        ATT_CONS_NODQ2UP_CNT,
-        ATT_CONS_NODQ3UP_CNT,
-        ATT_CONS_NODQ4UP_CNT,
-        ATT_CONS_NODQ5UP_CNT,
-        ATT_DQCNT_3M,
-        ATT_DQCNT_6M,
-        ATT_DQCNT_12M,
-        ATT_DQ2UP_CNT_3M,
-        ATT_DQ2UP_CNT_6M,
-        ATT_DQ2UP_CNT_12M,
-        ATT_DQ4UP_CNT_3M,
-        ATT_IS_DQ_L1M,
-        ATT_IS_DQ2UP_L1M,
-        ATT_IS_B1_WORST_DQ_L3M,
-        ATT_IS_B1_WORST_DQ_L12M,
-        ATT_IS_B2_WORST_DQ_L12M,
-        ATT_IS_B3_L1M,
-        ATT_IS_B4_WORST_DQ_L3M,
-        WORST_DQ_L3M,
-        WORST_DQ_L6M,
-        ATT_NOAUTOPAY_CNT_3M,
-        ATT_NOAUTOPAY_CNT_12M,
-        ATT_IS_AUTOPAY_L6M,
-        ATT_MS_LAST_NOAUTOPAY,
-        ATT_REVERSED_CNT_3M,
-        ATT_REVERSED_CNT_12M,
-        ATT_IS_REVERSED_RENTRY,
-        ATT3_IS_STRROLLIN_B4UP,
-        ATT3_IS_STRROLLIN_B5,
-        ATT3_ROLLIN_B1_CNT_12M,
-        ATT3_ROLLIN_B2_CNT_12M,
-        ATT3_ROLLIN_B3_CNT_12M,
-        ATT3_DOWN_TOB0_CNT_12M,
-        ATT_LAST_PAYMENT_AMOUNT_FIXED,
-        ATT_PAST_DUE_AMT_FIXED,
-        ATT_REL_REPAY_TERM_MON,
-        ATT_MAIN,
-        DQ_BUCKET
-
-    FROM TDM_RISK_MGMT_HUB_CLONE_PL5.MODELED.PROD_NOV_SAMPLE
-    WHERE BUSINESS_LOAN_ID IN (
-        '1646484','1181069','1385935',
-        '2306809','1503659','1628721','2553891'
-    )
-),
-
-OFFLINE AS (
-    SELECT
-        BUSINESS_LOAN_ID,
-        BUSINESS_APPLICATION_ID,
-        PL_USER_ID,
-        OBSERVATION_DATE,
-
-        -- Same in-house features from offline table
-        ATT_SEASONING,
-        ATT_GROSS_INCOME,
-        ATT_PAST_DUE_TO_SCHD,
-        ATT_COBORROWER_IND,
-        ATT_IS_AUTOPAY,
-        ATT_IS_DUE_CHG,
-        ATT_ORIG_GROSS_INT_RATE,
-        ATT_ORIGINAL_PRIN,
-        ATT_UBTI,
-        ATT_PAST_DUE_TO_INCOME,
-        ATT_REMAINING_BAL_RATIO,
-        ATT_TOT_DQ_DAYS_CYC_RATIO_L1M,
-        ATT_TOT_DQ_DAYS_CYC_RATIO_L3M,
-        ATT_TOT_DQ_DAYS_CYC_RATIO_L6M,
-        ATT_CONS_NODQCNT,
-        ATT_CONS_NODQ2UP_CNT,
-        ATT_CONS_NODQ3UP_CNT,
-        ATT_CONS_NODQ4UP_CNT,
-        ATT_CONS_NODQ5UP_CNT,
-        ATT_DQCNT_3M,
-        ATT_DQCNT_6M,
-        ATT_DQCNT_12M,
-        ATT_DQ2UP_CNT_3M,
-        ATT_DQ2UP_CNT_6M,
-        ATT_DQ2UP_CNT_12M,
-        ATT_DQ4UP_CNT_3M,
-        ATT_IS_DQ_L1M,
-        ATT_IS_DQ2UP_L1M,
-        ATT_IS_B1_WORST_DQ_L3M,
-        ATT_IS_B1_WORST_DQ_L12M,
-        ATT_IS_B2_WORST_DQ_L12M,
-        ATT_IS_B3_L1M,
-        ATT_IS_B4_WORST_DQ_L3M,
-        WORST_DQ_L3M,
-        WORST_DQ_L6M,
-        ATT_NOAUTOPAY_CNT_3M,
-        ATT_NOAUTOPAY_CNT_12M,
-        ATT_IS_AUTOPAY_L6M,
-        ATT_MS_LAST_NOAUTOPAY,
-        ATT_REVERSED_CNT_3M,
-        ATT_REVERSED_CNT_12M,
-        ATT_IS_REVERSED_RENTRY,
-        ATT3_IS_STRROLLIN_B4UP,
-        ATT3_IS_STRROLLIN_B5,
-        ATT3_ROLLIN_B1_CNT_12M,
-        ATT3_ROLLIN_B2_CNT_12M,
-        ATT3_ROLLIN_B3_CNT_12M,
-        ATT3_DOWN_TOB0_CNT_12M,
-        ATT_LAST_PAYMENT_AMOUNT_FIXED,
-        ATT_PAST_DUE_AMT_FIXED,
-        ATT_REL_REPAY_TERM_MON,
-        ATT_MAIN,
-        DQ_BUCKET
-
-    FROM TDM_RISK_MGMT_HUB_CLONE_PL5.MODELED.PL_GEN3_COL_FEATURES_2025
-    WHERE BUSINESS_LOAN_ID IN (
-        '1646484','1181069','1385935',
-        '2306809','1503659','1628721','2553891'
-    )
-    AND OBSERVATION_DATE BETWEEN '2025-11-01' AND '2025-11-30'
-)
-
--- ─────────────────────────────────────────────────────────────
--- Side by side comparison with diff for every feature
--- ─────────────────────────────────────────────────────────────
 SELECT
-    p.BUSINESS_LOAN_ID,
-    p.OBSERVATION_DATE,
-    p.PROD_SCORE,
-    p.DQ_BUCKET                                             AS PROD_DQ_BUCKET,
-    o.DQ_BUCKET                                             AS OFFLINE_DQ_BUCKET,
+    s.BUSINESS_LOAN_ID,
+    s.BUSINESS_APPLICATION_ID,
+    s.PL_USER_ID,
+    s.ASOF_DATE,
+    s.TIER,
+    s.ATT_MAIN,
+    s.DQ_BUCKET,
+    s.CYCLE_START_DATE,
+    s.ATT_COBORROWER_IND,
+    s.ATT_ORIGINAL_PRIN,
+    s.ATT2_ORIG_VANTAGE,
+    s.ATT2_ORIG_FICO,
 
-    -- ATT_MAIN — tier based flag, key suspect
-    p.ATT_MAIN                                              AS P_ATT_MAIN,
-    o.ATT_MAIN                                              AS O_ATT_MAIN,
-    p.ATT_MAIN - o.ATT_MAIN                                 AS DIFF_ATT_MAIN,
+    -- ── In-house DQ features ──────────────────────────────
+    s.ATT_IS_B1_WORST_DQ_L12M,
+    s.ATT_TOT_DQ_DAYS_CYC_RATIO_L3M,
+    s.ATT_CONS_NODQCNT,
+    s.ATT_NOAUTOPAY_CNT_12M,
+    s.ATT_PAST_DUE_TO_SCHD,
+    s.ATT_IS_AUTOPAY,
+    s.ATT_IS_B1_WORST_DQ_L3M,
+    s.ATT3_ROLLIN_B1_CNT_12M,
+    s.ATT_TOT_DQ_DAYS_CYC_RATIO_L1M,
+    s.ATT_IS_AUTOPAY_L6M,
+    s.ATT_ORIG_GROSS_INT_RATE,
+    s.ATT_IS_REVERSED_RENTRY,
+    s.ATT_DQCNT_3M,
+    s.ATT_MS_LAST_NOAUTOPAY,
+    s.ATT_UBTI,
+    s.ATT_CONS_NODQ2UP_CNT,
+    s.ATT_SEASONING,
+    s.ATT_IS_DUE_CHG,
+    s.ATT_DQ2UP_CNT_6M,
+    s.WORST_DQ_L3M,
+    s.ATT_DQ2UP_CNT_3M,
+    s.ATT_GROSS_INCOME,
+    s.ATT_CONS_NODQ3UP_CNT,
+    s.ATT_IS_DQ2UP_L1M,
+    s.WORST_DQ_L6M,
+    s.ATT_DQCNT_6M,
+    s.ATT_NOAUTOPAY_CNT_3M,
+    s.ATT_IS_B2_WORST_DQ_L12M,
+    s.ATT_REVERSED_CNT_3M,
+    s.ATT_CONS_NODQ4UP_CNT,
+    s.ATT_DQ2UP_CNT_12M,
+    s.ATT_REVERSED_CNT_12M,
+    s.ATT3_ROLLIN_B2_CNT_12M,
+    s.ATT_DQ4UP_CNT_3M,
+    s.ATT_PAST_DUE_TO_INCOME,
+    s.ATT3_DOWN_TOB0_CNT_12M,
+    s.ATT_IS_B3_L1M,
+    s.ATT_REL_REPAY_TERM_MON,
+    s.ATT_CONS_NODQ5UP_CNT,
+    s.ATT_LAST_PAYMENT_AMOUNT_FIXED,
+    s.ATT3_IS_STRROLLIN_B4UP,
+    s.ATT_DQCNT_12M,
+    s.ATT3_IS_STRROLLIN_B5,
+    s.ATT_IS_B4_WORST_DQ_L3M,
+    s.ATT_PAST_DUE_AMT_FIXED,
+    s.ATT3_ROLLIN_B3_CNT_12M,
+    s.ATT_TOT_DQ_DAYS_CYC_RATIO_L6M,
+    s.ATT_REMAINING_BAL_RATIO,
 
-    -- Seasoning
-    p.ATT_SEASONING                                         AS P_SEASONING,
-    o.ATT_SEASONING                                         AS O_SEASONING,
-    p.ATT_SEASONING - o.ATT_SEASONING                       AS DIFF_SEASONING,
+    -- ── Experian date + score features ───────────────────
+    s.EXP_AVA_DATE,
+    s.VANTAGE_V3_SCORE,
+    s.FICOCLV8_SCORE,
 
-    -- Coborrower — drives ATT3_SOFIDTI_REFRESH branch
-    p.ATT_COBORROWER_IND                                    AS P_COBORROWER,
-    o.ATT_COBORROWER_IND                                    AS O_COBORROWER,
-    p.ATT_COBORROWER_IND - o.ATT_COBORROWER_IND             AS DIFF_COBORROWER,
+    -- ── Experian bureau attributes ────────────────────────
+    s.ALL5820, s.MTF5820, s.ALX5839, s.MTX5839,
+    s.ALL5320, s.BCX7110, s.PIL0438, s.FIP8320,
+    s.ALL7519, s.ALL7517, s.IQF9540, s.ALL7518,
+    s.ALL8552, s.BRC5620, s.REH7120, s.ALL5012,
+    s.BCA8370, s.BCC7482, s.ALL2421, s.FIP0437,
+    s.BCC3421, s.BCC7483, s.IQM9540, s.ALL2012,
+    s.ALL8250, s.ALL8272, s.ALL0438, s.ALL8370,
+    s.ALS0337, s.ILN4080, s.BCA8151, s.REV0318,
+    s.ALL8154, s.ALL8171, s.BCC7708, s.AUA8370,
+    s.STU5031, s.ALL8271, s.BCC8338, s.ALL2226,
+    s.ALL4980, s.REV2126, s.REV5742,
 
-    -- Income
-    p.ATT_GROSS_INCOME                                      AS P_INCOME,
-    o.ATT_GROSS_INCOME                                      AS O_INCOME,
-    p.ATT_GROSS_INCOME - o.ATT_GROSS_INCOME                 AS DIFF_INCOME,
+    -- ── Exclusion flags ───────────────────────────────────
+    s.NON_DELNQ_FLAG,
+    s.LOW_PRINCIPAL_FLAG,
+    s.MOB_LT3_FLAG,
+    s.IS_DECEASED,
+    s.IS_FRAUD_1,
+    s.COMBINED_EXCLUSION_FLAG,
 
-    -- Past due
-    p.ATT_PAST_DUE_TO_SCHD                                  AS P_PAST_DUE_SCHD,
-    o.ATT_PAST_DUE_TO_SCHD                                  AS O_PAST_DUE_SCHD,
-    ROUND(p.ATT_PAST_DUE_TO_SCHD
-          - o.ATT_PAST_DUE_TO_SCHD, 6)                      AS DIFF_PAST_DUE_SCHD,
+    -- ── Score + metadata ──────────────────────────────────
+    s.SCORE                         AS PROD_SCORE,
+    s.DAYS_DIFF,
+    s.VERSION
 
-    -- DQ ratio features
-    ROUND(p.ATT_TOT_DQ_DAYS_CYC_RATIO_L1M
-          - o.ATT_TOT_DQ_DAYS_CYC_RATIO_L1M, 6)             AS DIFF_DQ_RATIO_L1M,
-    ROUND(p.ATT_TOT_DQ_DAYS_CYC_RATIO_L3M
-          - o.ATT_TOT_DQ_DAYS_CYC_RATIO_L3M, 6)             AS DIFF_DQ_RATIO_L3M,
+FROM TDM_SERVICING.CLEANSED.PL_GEN3_RISK_SCORE s
 
-    -- DQ count features
-    p.ATT_DQCNT_3M    - o.ATT_DQCNT_3M                     AS DIFF_DQCNT_3M,
-    p.ATT_DQCNT_6M    - o.ATT_DQCNT_6M                     AS DIFF_DQCNT_6M,
-    p.ATT_DQCNT_12M   - o.ATT_DQCNT_12M                    AS DIFF_DQCNT_12M,
-    p.ATT_DQ2UP_CNT_3M  - o.ATT_DQ2UP_CNT_3M               AS DIFF_DQ2UP_3M,
-    p.ATT_DQ2UP_CNT_6M  - o.ATT_DQ2UP_CNT_6M               AS DIFF_DQ2UP_6M,
-    p.ATT_DQ2UP_CNT_12M - o.ATT_DQ2UP_CNT_12M              AS DIFF_DQ2UP_12M,
+WHERE s.BUSINESS_LOAN_ID IN (
+    '1646484', '1181069', '1385935',
+    '2306809', '1503659', '1628721', '2553891'
+)
+AND s.ASOF_DATE  >= '2025-11-02'
+AND s.ASOF_DATE  <  '2025-12-01'
+AND s.DQ_BUCKET  IN ('Bucket 1', 'Bucket 2', 'Bucket 3', 'Bucket 4+')
+AND s.SCORE      >  0
+AND s.DAYS_DIFF  <= 10
 
-    -- Worst DQ
-    p.WORST_DQ_L3M  - o.WORST_DQ_L3M                       AS DIFF_WORST_DQ_L3M,
-    p.WORST_DQ_L6M  - o.WORST_DQ_L6M                       AS DIFF_WORST_DQ_L6M,
+QUALIFY ROW_NUMBER() OVER (
+    PARTITION BY s.BUSINESS_LOAN_ID,
+                 s.BUSINESS_APPLICATION_ID,
+                 s.PL_USER_ID,
+                 LEFT(CAST(s.ASOF_DATE AS STRING), 7)
+    ORDER BY s.DAYS_DIFF ASC   -- freshest score per cycle
+) = 1
 
-    -- Cons no DQ features
-    p.ATT_CONS_NODQCNT    - o.ATT_CONS_NODQCNT              AS DIFF_CONS_NODQ,
-    p.ATT_CONS_NODQ2UP_CNT - o.ATT_CONS_NODQ2UP_CNT        AS DIFF_CONS_NODQ2UP,
-    p.ATT_CONS_NODQ3UP_CNT - o.ATT_CONS_NODQ3UP_CNT        AS DIFF_CONS_NODQ3UP,
-
-    -- Autopay features
-    p.ATT_IS_AUTOPAY      - o.ATT_IS_AUTOPAY                AS DIFF_AUTOPAY,
-    p.ATT_NOAUTOPAY_CNT_12M - o.ATT_NOAUTOPAY_CNT_12M      AS DIFF_NOAUTOPAY_12M,
-    p.ATT_MS_LAST_NOAUTOPAY - o.ATT_MS_LAST_NOAUTOPAY      AS DIFF_MS_LAST_NOAUTOPAY,
-
-    -- Reversal features
-    p.ATT_REVERSED_CNT_3M  - o.ATT_REVERSED_CNT_3M         AS DIFF_REVERSED_3M,
-    p.ATT_REVERSED_CNT_12M - o.ATT_REVERSED_CNT_12M        AS DIFF_REVERSED_12M,
-
-    -- Rollin features
-    p.ATT3_ROLLIN_B1_CNT_12M - o.ATT3_ROLLIN_B1_CNT_12M   AS DIFF_ROLLIN_B1,
-    p.ATT3_ROLLIN_B2_CNT_12M - o.ATT3_ROLLIN_B2_CNT_12M   AS DIFF_ROLLIN_B2,
-    p.ATT3_ROLLIN_B3_CNT_12M - o.ATT3_ROLLIN_B3_CNT_12M   AS DIFF_ROLLIN_B3,
-    p.ATT3_DOWN_TOB0_CNT_12M - o.ATT3_DOWN_TOB0_CNT_12M   AS DIFF_DOWN_TOB0,
-
-    -- Financial ratios
-    ROUND(p.ATT_UBTI
-          - o.ATT_UBTI, 6)                                  AS DIFF_UBTI,
-    ROUND(p.ATT_PAST_DUE_TO_INCOME
-          - o.ATT_PAST_DUE_TO_INCOME, 6)                    AS DIFF_PAST_DUE_INCOME,
-    ROUND(p.ATT_REMAINING_BAL_RATIO
-          - o.ATT_REMAINING_BAL_RATIO, 6)                   AS DIFF_REM_BAL_RATIO,
-    ROUND(p.ATT_REL_REPAY_TERM_MON
-          - o.ATT_REL_REPAY_TERM_MON, 6)                    AS DIFF_REL_REPAY_TERM,
-    p.ATT_PAST_DUE_AMT_FIXED - o.ATT_PAST_DUE_AMT_FIXED   AS DIFF_PAST_DUE_AMT,
-
-    -- Overall mismatch flag — any diff > 0 across all features
-    IFF(
-        p.ATT_MAIN                  != o.ATT_MAIN
-        OR p.ATT_COBORROWER_IND     != o.ATT_COBORROWER_IND
-        OR p.ATT_SEASONING          != o.ATT_SEASONING
-        OR p.ATT_GROSS_INCOME       != o.ATT_GROSS_INCOME
-        OR p.ATT_DQCNT_3M           != o.ATT_DQCNT_3M
-        OR p.ATT_DQCNT_12M          != o.ATT_DQCNT_12M
-        OR p.ATT_DQ2UP_CNT_12M      != o.ATT_DQ2UP_CNT_12M
-        OR p.WORST_DQ_L3M           != o.WORST_DQ_L3M
-        OR p.ATT_CONS_NODQCNT       != o.ATT_CONS_NODQCNT
-        OR p.ATT_REVERSED_CNT_12M   != o.ATT_REVERSED_CNT_12M
-        OR p.ATT3_ROLLIN_B1_CNT_12M != o.ATT3_ROLLIN_B1_CNT_12M
-        OR ABS(p.ATT_PAST_DUE_TO_SCHD
-             - o.ATT_PAST_DUE_TO_SCHD) > 0.001,
-        'INHOUSE FEATURES DIFFER ❌',
-        'INHOUSE FEATURES MATCH ✅'
-    )                                                        AS INHOUSE_STATUS
-
-FROM PROD p
-
-LEFT JOIN OFFLINE o
-    ON  p.BUSINESS_LOAN_ID        = o.BUSINESS_LOAN_ID
-    AND p.BUSINESS_APPLICATION_ID = o.BUSINESS_APPLICATION_ID
-    AND p.PL_USER_ID              = o.PL_USER_ID
-    AND p.OBSERVATION_DATE        = o.OBSERVATION_DATE
-
-ORDER BY p.BUSINESS_LOAN_ID;
+ORDER BY s.BUSINESS_LOAN_ID;
