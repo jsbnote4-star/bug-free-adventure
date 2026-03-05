@@ -1,97 +1,74 @@
 -- ─────────────────────────────────────────────────────────────
--- Diagnostic: ATT_TOT_DQ_DAYS_CYC_RATIO_L3M and BCA8151
--- Why is PSI spiking specifically in Sep 2025 for Bucket 3?
+-- Feature distribution comparison: JPM tiers vs non-JPM tiers
+-- For Bucket 1, Q4 2025
+-- This explains WHY PSI is high when JPM accounts are included
 -- ─────────────────────────────────────────────────────────────
 
--- STEP 1: Month by month distribution of both variables in Bucket 3
--- Compare Sep vs surrounding months to isolate the spike
+WITH SPLIT AS (
+    SELECT
+        *,
+        IFF(TIER IN (61, 62, 63), 'JPM', 'NON_JPM') AS TIER_GROUP
+    FROM TDM_RISK_MGMT_HUB_CLONE_PL5.MODELED.PL_GEN3_COL_FEATURES_2025
+    WHERE OBSERVATION_DATE BETWEEN '2025-09-01' AND '2025-11-30'
+      AND DQ_BUCKET = 'Bucket 1'
+      AND COMBINED_EXCLUSION_FLAG = 0
+)
+
 SELECT
-    DATE_TRUNC('MONTH', OBSERVATION_DATE)   AS MONTH,
-    COUNT(*)                                 AS TOTAL_LOANS,
+    TIER_GROUP,
+    COUNT(*)                                            AS TOTAL_LOANS,
 
-    -- ATT_TOT_DQ_DAYS_CYC_RATIO_L3M stats
-    ROUND(AVG(ATT_TOT_DQ_DAYS_CYC_RATIO_L3M), 4)                        AS AVG_DQ_RATIO_L3M,
-    ROUND(MEDIAN(ATT_TOT_DQ_DAYS_CYC_RATIO_L3M), 4)                     AS MEDIAN_DQ_RATIO_L3M,
-    ROUND(COUNT_IF(ATT_TOT_DQ_DAYS_CYC_RATIO_L3M = 0) 
-          / COUNT(*) * 100, 2)                                           AS PCT_ZERO_DQ_RATIO_L3M,
-    ROUND(COUNT_IF(ATT_TOT_DQ_DAYS_CYC_RATIO_L3M IS NULL) 
-          / COUNT(*) * 100, 2)                                           AS PCT_NULL_DQ_RATIO_L3M,
-    ROUND(COUNT_IF(ATT_TOT_DQ_DAYS_CYC_RATIO_L3M > 0.5) 
-          / COUNT(*) * 100, 2)                                           AS PCT_GT50PCT_DQ_RATIO_L3M,
-    ROUND(COUNT_IF(ATT_TOT_DQ_DAYS_CYC_RATIO_L3M = 1) 
-          / COUNT(*) * 100, 2)                                           AS PCT_FULL_DQ_RATIO_L3M,
+    -- Features with highest PSI breaches
+    -- Consecutive no DQ features
+    ROUND(AVG(ATT_CONS_NODQ2UP_CNT), 2)                AS AVG_CONS_NODQ2UP,
+    ROUND(MEDIAN(ATT_CONS_NODQ2UP_CNT), 2)             AS MED_CONS_NODQ2UP,
+    ROUND(AVG(ATT_CONS_NODQ3UP_CNT), 2)                AS AVG_CONS_NODQ3UP,
+    ROUND(MEDIAN(ATT_CONS_NODQ3UP_CNT), 2)             AS MED_CONS_NODQ3UP,
+    ROUND(AVG(ATT_CONS_NODQCNT), 2)                    AS AVG_CONS_NODQCNT,
 
-    -- BCA8151 stats
-    ROUND(AVG(BCA8151), 4)                                               AS AVG_BCA8151,
-    ROUND(MEDIAN(BCA8151), 4)                                            AS MEDIAN_BCA8151,
-    ROUND(COUNT_IF(BCA8151 = 0) 
-          / COUNT(*) * 100, 2)                                           AS PCT_ZERO_BCA8151,
-    ROUND(COUNT_IF(BCA8151 IS NULL) 
-          / COUNT(*) * 100, 2)                                           AS PCT_NULL_BCA8151,
-    ROUND(COUNT_IF(BCA8151 > 100) 
-          / COUNT(*) * 100, 2)                                           AS PCT_GT100_BCA8151
+    -- Rollin features
+    ROUND(AVG(ATT3_ROLLIN_B1_CNT_12M), 4)              AS AVG_ROLLIN_B1_12M,
+    ROUND(AVG(ATT_DQCNT_3M), 4)                        AS AVG_DQCNT_3M,
+    ROUND(AVG(ATT_DQ2UP_CNT_6M), 4)                    AS AVG_DQ2UP_6M,
 
-FROM TDM_RISK_MGMT_HUB_CLONE_PL5.MODELED.PL_GEN3_COL_FEATURES_2025
-WHERE OBSERVATION_DATE BETWEEN '2025-01-01' AND '2025-11-30'
-  AND DQ_BUCKET = 'Bucket 3'
-GROUP BY 1
-ORDER BY 1;
+    -- Autopay
+    ROUND(AVG(ATT_IS_AUTOPAY), 4)                      AS AVG_AUTOPAY,
+    ROUND(AVG(ATT_IS_AUTOPAY_L6M), 4)                  AS AVG_AUTOPAY_L6M,
 
+    -- Credit score features
+    ROUND(AVG(ATT2_ORIG_FICO), 2)                      AS AVG_ORIG_FICO,
+    ROUND(AVG(ATT2_ORIG_VANTAGE), 2)                   AS AVG_ORIG_VANTAGE,
+    ROUND(AVG(ATT2_FICO_CHANGE), 4)                    AS AVG_FICO_CHANGE,
+    ROUND(AVG(ATT2_VANTAGE_CHANGE), 4)                 AS AVG_VANTAGE_CHANGE,
 
--- ─────────────────────────────────────────────────────────────
--- STEP 2: What is different about Sep Bucket 3 accounts?
--- Check their DQ history — are these accounts that just entered B3
--- or have been in B3 for multiple cycles?
--- ─────────────────────────────────────────────────────────────
-SELECT
-    DATE_TRUNC('MONTH', OBSERVATION_DATE)   AS MONTH,
-    COUNT(*)                                 AS TOTAL_LOANS,
+    -- Bureau features
+    ROUND(AVG(ALL7517), 4)                             AS AVG_ALL7517,
+    ROUND(AVG(ALL7518), 4)                             AS AVG_ALL7518,
+    ROUND(AVG(ALL7519), 4)                             AS AVG_ALL7519,
+    ROUND(AVG(ATT_PAST_DUE_TO_SCHD), 4)               AS AVG_PAST_DUE_SCHD,
+    ROUND(AVG(ATT_GROSS_INCOME), 2)                    AS AVG_GROSS_INCOME,
 
-    -- DQ history context
-    ROUND(AVG(ATT_SEASONING), 1)             AS AVG_SEASONING,
-    ROUND(AVG(ATT_DQ2UP_CNT_12M), 2)        AS AVG_DQ2UP_12M,
-    ROUND(AVG(ATT_DQCNT_6M), 2)             AS AVG_DQCNT_6M,
-    ROUND(AVG(ATT_CONS_NODQ3UP_CNT), 2)     AS AVG_CONS_NODQ3UP,
+    -- Seasoning
+    ROUND(AVG(ATT_SEASONING), 2)                       AS AVG_SEASONING
 
-    -- How long have they been in B3+?
-    ROUND(COUNT_IF(ATT_CONS_NODQ3UP_CNT = 0)
-          / COUNT(*) * 100, 2)               AS PCT_STUCK_IN_B3,
-    -- Fresh rollin vs chronic
-    ROUND(COUNT_IF(ATT3_ROLLIN_B2_CNT_12M > 0)
-          / COUNT(*) * 100, 2)               AS PCT_RECENT_ROLLIN,
+FROM SPLIT
+GROUP BY TIER_GROUP
+ORDER BY TIER_GROUP;
+```
 
-    -- The key ratio itself
-    ROUND(AVG(ATT_TOT_DQ_DAYS_CYC_RATIO_L3M), 4) AS AVG_DQ_RATIO_L3M,
-    ROUND(AVG(BCA8151), 4)                   AS AVG_BCA8151
+---
 
-FROM TDM_RISK_MGMT_HUB_CLONE_PL5.MODELED.PL_GEN3_COL_FEATURES_2025
-WHERE OBSERVATION_DATE BETWEEN '2025-01-01' AND '2025-11-30'
-  AND DQ_BUCKET = 'Bucket 3'
-GROUP BY 1
-ORDER BY 1;
+## Part 2 — Target PSI Explanation
 
-
--- ─────────────────────────────────────────────────────────────
--- STEP 3: Isolate Sep 2025 Bucket 3 accounts
--- Are they a different type of account vs Aug and Oct?
--- Check origination cohort and seasoning
--- ─────────────────────────────────────────────────────────────
-SELECT
-    DATE_TRUNC('MONTH', OBSERVATION_DATE)   AS MONTH,
-    -- Origination cohort bucketing
-    CASE
-        WHEN ATT_SEASONING <= 6   THEN '1. New (<=6m)'
-        WHEN ATT_SEASONING <= 12  THEN '2. Early (7-12m)'
-        WHEN ATT_SEASONING <= 24  THEN '3. Mid (13-24m)'
-        WHEN ATT_SEASONING <= 36  THEN '4. Mature (25-36m)'
-        ELSE                           '5. Seasoned (>36m)'
-    END                                      AS SEASONING_BUCKET,
-    COUNT(*)                                 AS TOTAL_LOANS,
-    ROUND(AVG(ATT_TOT_DQ_DAYS_CYC_RATIO_L3M), 4) AS AVG_DQ_RATIO_L3M,
-    ROUND(AVG(BCA8151), 4)                   AS AVG_BCA8151
-
-FROM TDM_RISK_MGMT_HUB_CLONE_PL5.MODELED.PL_GEN3_COL_FEATURES_2025
-WHERE OBSERVATION_DATE BETWEEN '2025-08-01' AND '2025-10-30'
-  AND DQ_BUCKET = 'Bucket 3'
-GROUP BY 1, 2
-ORDER BY 1, 2;
+Yes — your reasoning is correct and it's actually the standard explanation for this situation:
+```
+Features out of distribution
+        ↓
+Model receives inputs it never saw during training
+        ↓
+Predictions are unreliable / in wrong range
+        ↓
+Score distribution shifts
+        ↓
+Target PSI breaches because decile/bucket 
+assignment is based on shifted scores
