@@ -1,345 +1,47 @@
-"""
-PSI Feature Distribution Diagnostic v2
-=======================================
-Generates a detailed percentile + PSI table for any feature,
-comparing benchmark (all months) vs current (monitored months).
-
-Output format:
-Bucket | Feature | Month | Dataset | Obs | Missing_Rate | P05 | P25 | P50 | P75 | P95 | Mean | PSI
-
-FIXES APPLIED (aligned with psi_pipeline_fixed_v2.py):
-
-FIX 1 — calculate_psi_continuous:
-    Removed np.unique(breakpoints) deduplication. Discrete-heavy features
-    (e.g. ATT_TOT_DQ_DAYS_CYC_RATIO_L6M) were producing variable bin counts
-    month-to-month causing wildly unstable PSI. Now always exactly 10 bins.
-
-FIX 2 — calculate_psi_categorical:
-    Null filling now always applied (was missing).
-    Zero-proportion guard now applied to all categories including cross-dataset
-    mismatches (was silently skipping psi += 0 when one side was zero).
-"""
-
-import pandas as pd
-import numpy as np
-import warnings
-warnings.filterwarnings('ignore')
-
-
-# ============================================================================
-# PSI HELPER (same logic as your pipeline)
-# ============================================================================
-
-def calculate_psi_continuous(expected_arr, actual_arr, buckets=10):
-    """
-    Calculate PSI between two arrays using quantile binning on expected.
-
-    FIX: Removed np.unique(breakpoints) — duplicate bin edges for discrete-heavy
-    features were causing variable effective bin counts month-to-month, producing
-    wildly unstable PSI values even when distributions were identical.
-    Now passes raw quantile breakpoints directly to np.histogram, always giving
-    exactly `buckets` bins — matching the original Matthew Burke methodology.
-    """
-    expected_arr = expected_arr[~np.isnan(expected_arr)]
-    actual_arr   = actual_arr[~np.isnan(actual_arr)]
-
-    if len(expected_arr) == 0 or len(actual_arr) == 0:
-        return np.nan
-
-    # NO np.unique — keep all breakpoints to guarantee exactly `buckets` bins
-    breakpoints = np.array([
-        np.percentile(expected_arr, b)
-        for b in np.linspace(0, 100, buckets + 1)
-    ])
-
-    e_counts = np.histogram(expected_arr, breakpoints)[0]
-    a_counts = np.histogram(actual_arr,   breakpoints)[0]
-
-    e_pct = e_counts / len(expected_arr)
-    a_pct = a_counts / len(actual_arr)
-
-    psi = 0.0
-    for e, a in zip(e_pct, a_pct):
-        e = e if e > 0 else 0.0001
-        a = a if a > 0 else 0.0001
-        psi += (a - e) * np.log(a / e)
-
-    return psi
-
-
-def calculate_psi_categorical(ref_series, new_series, null_value='NULL', special_values=None):
-    """
-    Calculate PSI for a categorical feature.
-
-    FIX 1: Null filling now always applied (was missing entirely in old version).
-    FIX 2: Zero-proportion guard (0.0001) applied to all categories — previously
-            categories present in one dataset but not the other were silently
-            skipped with psi += 0, underestimating drift.
-    """
-    ref = ref_series.copy()
-    new = new_series.copy()
-
-    # Always fill nulls
-    ref = ref.fillna(null_value)
-    new = new.fillna(null_value)
-
-    # Replace special sentinel values with null placeholder
-    if special_values is not None:
-        ref = ref.replace(special_values, null_value)
-        new = new.replace(special_values, null_value)
-
-    ref_counts = ref.value_counts(normalize=True)
-    new_counts = new.value_counts(normalize=True)
-    all_cats   = set(ref.unique()) | set(new.unique())
-
-    psi = 0.0
-    for cat in all_cats:
-        e = ref_counts.get(cat, 0)
-        a = new_counts.get(cat, 0)
-        # Apply zero guard to both sides
-        e = e if e > 0 else 0.0001
-        a = a if a > 0 else 0.0001
-        psi += (a - e) * np.log(a / e)
-    return psi
-
-
-# ============================================================================
-# CORE DIAGNOSTIC FUNCTION
-# ============================================================================
-
-def build_distribution_table(
-    benchmark_df: pd.DataFrame,
-    actual_df: pd.DataFrame,
-    features: list,
-    bucket_name: str,
-    categorical_vars: list = None,
-    date_col: str = 'month',
-    benchmark_label: str = 'Benchmark',
-    percentiles: list = [5, 25, 50, 75, 95]
-) -> pd.DataFrame:
-    """
-    For each feature, produce one row per month of actual data
-    plus one row per month of benchmark data, with percentile stats and PSI.
-
-    PSI is always calculated: benchmark_overall vs that specific month's data.
-    """
-    if categorical_vars is None:
-        categorical_vars = []
-
-    rows = []
-    p_labels = [f'P{p:02d}' for p in percentiles]
-
-    def get_stats(series, ref_series=None, is_cat=False, special_vals=None):
-        """Return dict of stats for a series. PSI requires ref_series."""
-        n     = len(series)
-        n_mis = series.isna().sum()
-        mis_r = n_mis / n if n > 0 else np.nan
-
-        if is_cat:
-            pcts = {lbl: np.nan for lbl in p_labels}
-            mean_val = np.nan
-        else:
-            clean = series.dropna()
-            pcts  = {f'P{p:02d}': np.percentile(clean, p) if len(clean) > 0 else np.nan
-                     for p in percentiles}
-            mean_val = clean.mean() if len(clean) > 0 else np.nan
-
-        psi_val = np.nan
-        if ref_series is not None:
-            if is_cat:
-                psi_val = calculate_psi_categorical(
-                    ref_series, series, special_values=special_vals
-                )
-            else:
-                psi_val = calculate_psi_continuous(
-                    ref_series.dropna().values, series.dropna().values
-                )
-
-        return {'Obs': n, 'Missing_Rate': mis_r, **pcts, 'Mean': mean_val, 'PSI': psi_val}
-
-    SPECIAL_VALUES_CONFIG = {
-        'sloppy_ind_d3': [60.0],
-    }
-
-    for feat in features:
-        if feat not in benchmark_df.columns:
-            print(f"  WARNING: {feat} not in benchmark — skipping")
-            continue
-        if feat not in actual_df.columns:
-            print(f"  WARNING: {feat} not in actual — skipping")
-            continue
-
-        is_cat       = feat in categorical_vars
-        special_vals = SPECIAL_VALUES_CONFIG.get(feat, None)
-        bench_series = benchmark_df[feat]
-
-        # ── Benchmark rows (one per month if date_col present, else one overall) ──
-        if date_col in benchmark_df.columns:
-            for bmonth in sorted(benchmark_df[date_col].unique()):
-                bsub = benchmark_df[benchmark_df[date_col] == bmonth][feat]
-                s = get_stats(bsub, ref_series=None, is_cat=is_cat, special_vals=special_vals)
-                rows.append({
-                    'Bucket': bucket_name.upper(),
-                    'Feature': feat,
-                    'Month': bmonth,
-                    'Dataset': benchmark_label,
-                    **s
-                })
-        else:
-            s = get_stats(bench_series, ref_series=None, is_cat=is_cat, special_vals=special_vals)
-            rows.append({
-                'Bucket': bucket_name.upper(),
-                'Feature': feat,
-                'Month': 'ALL',
-                'Dataset': benchmark_label,
-                **s
-            })
-
-        # ── Current (actual) rows — one per month, PSI vs full benchmark ──
-        actual_df_copy = actual_df.copy()
-        actual_df_copy[date_col] = actual_df_copy[date_col].astype(str)
-
-        for month in sorted(actual_df_copy[date_col].unique()):
-            msub = actual_df_copy[actual_df_copy[date_col] == month][feat]
-            s = get_stats(msub, ref_series=bench_series, is_cat=is_cat, special_vals=special_vals)
-            rows.append({
-                'Bucket': bucket_name.upper(),
-                'Feature': feat,
-                'Month': month,
-                'Dataset': 'Current',
-                **s
-            })
-
-    result = pd.DataFrame(rows)
-
-    # Column ordering
-    col_order = ['Bucket', 'Feature', 'Month', 'Dataset',
-                 'Obs', 'Missing_Rate'] + p_labels + ['Mean', 'PSI']
-    result = result[[c for c in col_order if c in result.columns]]
-
-    return result
-
-
-# ============================================================================
-# CONVENIENCE WRAPPER — plug straight into your pipeline data
-# ============================================================================
-
-def run_distribution_diagnostic(
-    benchmark_parquet_path: str,
-    actual_parquet_path: str,
-    bucket: str,                        # 'b1', 'b2', 'b3', 'b4'
-    features: list,
-    preprocess_fn,
-    categorical_vars: list = None,
-    output_csv: str = None,
-    non_prime_flag_col: str = 'NON_PRIME_FLAG',
-    dq_bucket_map: dict = None
-) -> pd.DataFrame:
-    """
-    End-to-end wrapper:
-      1. Load benchmark parquet, filter ATT_MAIN=1 + OOT2
-      2. Load actual parquet, filter prime, preprocess bucket slice
-      3. Build distribution table
-      4. Optionally save to CSV
-    """
-    if dq_bucket_map is None:
-        dq_bucket_map = {
-            'b1': 'Bucket 1', 'b2': 'Bucket 2',
-            'b3': 'Bucket 3', 'b4': 'Bucket 4+'
-        }
-
-    print(f"Loading benchmark: {benchmark_parquet_path}")
-    bench = pd.read_parquet(benchmark_parquet_path)
-    bench.columns = bench.columns.str.upper()
-
-    if 'SAMPLE_TYPE' in bench.columns:
-        bench = bench[bench['SAMPLE_TYPE'] == 'OOT2']
-        print(f"  Filtered to OOT2: {len(bench):,} rows")
-
-    bench = bench[bench['ATT_MAIN'] == 1]
-    print(f"  Filtered to ATT_MAIN=1: {len(bench):,} rows")
-
-    # Add month to benchmark if OBSERVATION_DATE present
-    if 'OBSERVATION_DATE' in bench.columns:
-        bench['month'] = pd.to_datetime(bench['OBSERVATION_DATE'],
-                                        errors='coerce').dt.to_period('M').astype(str)
-
-    print(f"\nLoading actual: {actual_parquet_path}")
-    actual_raw = pd.read_parquet(actual_parquet_path)
-    actual_raw.columns = actual_raw.columns.str.upper()
-
-    if non_prime_flag_col in actual_raw.columns:
-        actual_raw = actual_raw[actual_raw[non_prime_flag_col] == 0]
-        print(f"  After prime filter: {len(actual_raw):,} rows")
-
-    dq_label = dq_bucket_map[bucket.lower()]
-    actual_bucket = actual_raw[actual_raw['DQ_BUCKET'] == dq_label].copy()
-    print(f"  {dq_label} rows: {len(actual_bucket):,}")
-
-    print(f"  Preprocessing {bucket.upper()}...")
-    actual_processed = preprocess_fn(actual_bucket)
-    actual_processed['month'] = pd.to_datetime(
-        actual_bucket['OBSERVATION_DATE'], errors='coerce'
-    ).dt.to_period('M').astype(str).values
-    print(f"  Preprocessed: {len(actual_processed):,} rows")
-
-    print(f"\nBuilding distribution table for {len(features)} features...")
-    result = build_distribution_table(
-        benchmark_df=bench,
-        actual_df=actual_processed,
-        features=features,
-        bucket_name=bucket,
-        categorical_vars=categorical_vars or [],
-        date_col='month'
-    )
-
-    if output_csv:
-        result.to_csv(output_csv, index=False)
-        print(f"\nSaved to: {output_csv}")
-
-    return result
-
-
-# ============================================================================
-# B4 DISTRIBUTION DIAGNOSTIC
-# ============================================================================
-
-if __name__ == "__main__":
-
-    from preprocess import b4_preprocess
-
-    B4_CATEGORICAL_VARS = [
-        'ATT_DQ2UP_CNT_12M',
-        'ATT_DQCNT_12M',
-        'ATT3_ROLLIN_B1_CNT_12M',
-        'ATT_CONS_NODQ5UP_CNT',
-        'ATT_NOAUTOPAY_CNT_12M',
-        'ATT3_ROLLIN_B3_CNT_12M',
-        'ATT3_IS_STRROLLIN_B4UP',
-        'ATT3_IS_STRROLLIN_B5',
-        'ATT_IS_B4_WORST_DQ_L3M'
-    ]
-
-    B4_FEATURES = [
-        'ATT_TOT_DQ_DAYS_CYC_RATIO_L3M', 'ATT_DQ2UP_CNT_12M',
-        'ATT_TOT_DQ_DAYS_CYC_RATIO_L1M', 'ATT_PAST_DUE_TO_SCHD',
-        'ATT3_IS_STRROLLIN_B4UP', 'ATT_DQCNT_12M',
-        'ATT3_ROLLIN_B1_CNT_12M', 'ATT3_IS_STRROLLIN_B5',
-        'ALL2226', 'ATT_IS_B4_WORST_DQ_L3M', 'ALL4980',
-        'ATT_PAST_DUE_AMT_FIXED', 'ATT3_ROLLIN_B3_CNT_12M',
-        'REV2126', 'ATT_TOT_DQ_DAYS_CYC_RATIO_L6M', 'ALL8154',
-        'ATT_CONS_NODQ5UP_CNT', 'ATT_REMAINING_BAL_RATIO',
-        'REV5742', 'ATT_NOAUTOPAY_CNT_12M'
-    ]
-
-    result = run_distribution_diagnostic(
-        benchmark_parquet_path='s3://sofi-data-science/mraj/pl_collection_b4_dr2_12jun25_processed.parquet',
-        actual_parquet_path='s3://sofi-data-science/jbhagat/pl_collection_scored_data_Q4_2025_JB.parquet',
-        bucket='b4',
-        features=B4_FEATURES,
-        preprocess_fn=b4_preprocess,
-        categorical_vars=B4_CATEGORICAL_VARS,
-        output_csv='b4_distribution_diagnostic.csv'
-    )
-
-    print(result.to_string(index=False))
+Bucket	Feature	Month	Dataset	Obs	Missing_Rate	P05	P25	P50	P75	P95	Mean	PSI
+B4	ATT_TOT_DQ_DAYS_CYC_RATIO_L6M	2024-07	Benchmark	6429	0	0.517049833	0.517049833	0.689272	0.765065833	0.949545633	0.6806645369	
+B4	ATT_TOT_DQ_DAYS_CYC_RATIO_L6M	2024-08	Benchmark	6484	0	0.516858166	0.516858166	0.689272	0.767049833	0.950779833	0.6805616852	
+B4	ATT_TOT_DQ_DAYS_CYC_RATIO_L6M	2024-09	Benchmark	6899	0	0.516858166	0.516858166	0.689080333	0.75718375	0.943869666	0.6747694502	
+B4	ATT_TOT_DQ_DAYS_CYC_RATIO_L6M	2024-04	Current	5948	0	0.517063333	0.517063333	0.6892855	0.756143833	0.939218475	0.6746700061	163.79%
+B4	ATT_TOT_DQ_DAYS_CYC_RATIO_L6M	2024-05	Current	6420	0	0.517255	0.517255	0.689477166	0.756143833	0.943500166	0.6714567636	172.70%
+B4	ATT_TOT_DQ_DAYS_CYC_RATIO_L6M	2024-06	Current	6528	0	0.516858166	0.516858166	0.689477166	0.75815875	0.945032666	0.6781185749	37.06%
+B4	ATT_TOT_DQ_DAYS_CYC_RATIO_L6M	2024-07	Current	6624	0	0.517049833	0.517049833	0.689272	0.7597733748	0.949779608	0.6765502049	171.39%
+B4	ATT_TOT_DQ_DAYS_CYC_RATIO_L6M	2024-08	Current	6762	0	0.516858166	0.516858166	0.689272	0.7574540833	0.9503776746	0.6765260718	35.88%
+B4	ATT_TOT_DQ_DAYS_CYC_RATIO_L6M	2024-09	Current	7148	0	0.516858166	0.516858166	0.689080333	0.751149333	0.9424615829	0.6716212589	52.95%
+B4	ATT_TOT_DQ_DAYS_CYC_RATIO_L6M	2024-10	Current	7491	0	0.516858166	0.516858166	0.689272	0.7448275	0.94875475	0.6755692131	32.06%
+B4	ATT_TOT_DQ_DAYS_CYC_RATIO_L6M	2024-11	Current	7609	0	0.516858166	0.516858166	0.689080333	0.752682	0.9448275	0.6747848252	46.20%
+B4	ATT_TOT_DQ_DAYS_CYC_RATIO_L6M	2024-12	Current	7719	0	0.517049833	0.517049833	0.689272	0.746551666	0.9338045	0.6751184433	168.21%
+B4	ATT_TOT_DQ_DAYS_CYC_RATIO_L6M	2025-01	Current	7945	0	0.516858166	0.516858166	0.689272	0.751915666	0.938888833	0.6753019888	32.64%
+B4	ATT_TOT_DQ_DAYS_CYC_RATIO_L6M	2025-02	Current	8081	0	0.516858166	0.516858166	0.689080333	0.757088	0.949999833	0.6779176229	50.89%
+B4	ATT_TOT_DQ_DAYS_CYC_RATIO_L6M	2025-03	Current	7851	0	0.517283833	0.528778166	0.689697666	0.7644954995	0.957375375	0.6836204895	162.64%
+B4	ATT_TOT_DQ_DAYS_CYC_RATIO_L6M	2025-04	Current	7473	0	0.517283833	0.5285865	0.689506	0.763452333	0.954950866	0.6811515224	162.57%
+B4	ATT_TOT_DQ_DAYS_CYC_RATIO_L6M	2025-05	Current	7859	0	0.5174755	0.5174755	0.689697666	0.755023333	0.9380417666	0.6730450756	154.91%
+B4	ATT_TOT_DQ_DAYS_CYC_RATIO_L6M	2025-06	Current	8154	0	0.516858166	0.516858166	0.689697666	0.756364333	0.9447849831	0.6769395789	34.48%
+B4	ATT_TOT_DQ_DAYS_CYC_RATIO_L6M	2025-07	Current	8331	0	0.517049833	0.517049833	0.689272	0.762920333	0.955864166	0.6793184718	170.29%
+B4	ATT_TOT_DQ_DAYS_CYC_RATIO_L6M	2025-08	Current	8563	0	0.516858166	0.516858166	0.689272	0.751617666	0.957073283	0.6762295762	37.21%
+B4	ATT_TOT_DQ_DAYS_CYC_RATIO_L6M	2025-09	Current	8806	0	0.516858166	0.516858166	0.689080333	0.750383	0.9429596663	0.6745487081	51.06%
+B4	ATT_TOT_DQ_DAYS_CYC_RATIO_L6M	2025-10	Current	9118	0	0.516858166	0.516858166	0.689272	0.749760458	0.9542145	0.6753157269	31.51%
+B4	ATT_TOT_DQ_DAYS_CYC_RATIO_L6M	2025-11	Current	9527	0	0.516858166	0.516858166	0.689080333	0.750383166	0.955306383	0.6748833071	51.20%
+B4	ALL8154	2024-07	Benchmark	6429	0	1	2	23	23	23	14.30829056	
+B4	ALL8154	2024-08	Benchmark	6484	0	1	2	23	23	23	14.0490438	
+B4	ALL8154	2024-09	Benchmark	6899	0	1	2	23	23	23	14.2585882	
+B4	ALL8154	2024-04	Current	5948	0	1	2	26.5	26.5	26.5	17.57078009	310.28%
+B4	ALL8154	2024-05	Current	6420	0	1	2	26.5	26.5	26.5	16.58637072	362.63%
+B4	ALL8154	2024-06	Current	6528	0	1	2	26.5	26.5	26.5	16.17708333	333.16%
+B4	ALL8154	2024-07	Current	6624	0	1	2	26.5	26.5	26.5	16.34110809	324.21%
+B4	ALL8154	2024-08	Current	6762	0	1	2	26.5	26.5	26.5	16.07860101	325.68%
+B4	ALL8154	2024-09	Current	7148	0	1	2	26.5	26.5	26.5	16.32106883	379.17%
+B4	ALL8154	2024-10	Current	7491	0	1	2	26.5	26.5	26.5	16.30429849	348.72%
+B4	ALL8154	2024-11	Current	7609	0	1	2	26.5	26.5	26.5	16.14082008	359.17%
+B4	ALL8154	2024-12	Current	7719	0	1	2	26.5	26.5	26.5	16.01198342	313.35%
+B4	ALL8154	2025-01	Current	7945	0	1	2	26.5	26.5	26.5	15.97986155	331.10%
+B4	ALL8154	2025-02	Current	8081	0	0	1	26.5	26.5	26.5	14.61081549	424.29%
+B4	ALL8154	2025-03	Current	7851	0	1	2	26.5	26.5	26.5	15.86848809	322.33%
+B4	ALL8154	2025-04	Current	7473	0	1	2	26.5	26.5	26.5	15.69911682	351.39%
+B4	ALL8154	2025-05	Current	7859	0	1	2	26.5	26.5	26.5	15.89534292	333.25%
+B4	ALL8154	2025-06	Current	8154	0	1	2	26.5	26.5	26.5	15.90428011	328.42%
+B4	ALL8154	2025-07	Current	8331	0	1	2	26.5	26.5	26.5	16.14866163	346.97%
+B4	ALL8154	2025-08	Current	8563	0	1	2	26.5	26.5	26.5	15.94312741	335.90%
+B4	ALL8154	2025-09	Current	8806	0	1	2	26.5	26.5	26.5	16.06319555	324.61%
+B4	ALL8154	2025-10	Current	9118	0	1	2	26.5	26.5	26.5	16.23574249	369.59%
+B4	ALL8154	2025-11	Current	9527	0	1	2	26.5	26.5	26.5	16.15949407	319.81%
