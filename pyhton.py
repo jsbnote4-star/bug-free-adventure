@@ -1,47 +1,167 @@
-Bucket	Feature	Month	Dataset	Obs	Missing_Rate	P05	P25	P50	P75	P95	Mean	PSI
-B4	ATT_TOT_DQ_DAYS_CYC_RATIO_L6M	2024-07	Benchmark	6429	0	0.517049833	0.517049833	0.689272	0.765065833	0.949545633	0.6806645369	
-B4	ATT_TOT_DQ_DAYS_CYC_RATIO_L6M	2024-08	Benchmark	6484	0	0.516858166	0.516858166	0.689272	0.767049833	0.950779833	0.6805616852	
-B4	ATT_TOT_DQ_DAYS_CYC_RATIO_L6M	2024-09	Benchmark	6899	0	0.516858166	0.516858166	0.689080333	0.75718375	0.943869666	0.6747694502	
-B4	ATT_TOT_DQ_DAYS_CYC_RATIO_L6M	2024-04	Current	5948	0	0.517063333	0.517063333	0.6892855	0.756143833	0.939218475	0.6746700061	163.79%
-B4	ATT_TOT_DQ_DAYS_CYC_RATIO_L6M	2024-05	Current	6420	0	0.517255	0.517255	0.689477166	0.756143833	0.943500166	0.6714567636	172.70%
-B4	ATT_TOT_DQ_DAYS_CYC_RATIO_L6M	2024-06	Current	6528	0	0.516858166	0.516858166	0.689477166	0.75815875	0.945032666	0.6781185749	37.06%
-B4	ATT_TOT_DQ_DAYS_CYC_RATIO_L6M	2024-07	Current	6624	0	0.517049833	0.517049833	0.689272	0.7597733748	0.949779608	0.6765502049	171.39%
-B4	ATT_TOT_DQ_DAYS_CYC_RATIO_L6M	2024-08	Current	6762	0	0.516858166	0.516858166	0.689272	0.7574540833	0.9503776746	0.6765260718	35.88%
-B4	ATT_TOT_DQ_DAYS_CYC_RATIO_L6M	2024-09	Current	7148	0	0.516858166	0.516858166	0.689080333	0.751149333	0.9424615829	0.6716212589	52.95%
-B4	ATT_TOT_DQ_DAYS_CYC_RATIO_L6M	2024-10	Current	7491	0	0.516858166	0.516858166	0.689272	0.7448275	0.94875475	0.6755692131	32.06%
-B4	ATT_TOT_DQ_DAYS_CYC_RATIO_L6M	2024-11	Current	7609	0	0.516858166	0.516858166	0.689080333	0.752682	0.9448275	0.6747848252	46.20%
-B4	ATT_TOT_DQ_DAYS_CYC_RATIO_L6M	2024-12	Current	7719	0	0.517049833	0.517049833	0.689272	0.746551666	0.9338045	0.6751184433	168.21%
-B4	ATT_TOT_DQ_DAYS_CYC_RATIO_L6M	2025-01	Current	7945	0	0.516858166	0.516858166	0.689272	0.751915666	0.938888833	0.6753019888	32.64%
-B4	ATT_TOT_DQ_DAYS_CYC_RATIO_L6M	2025-02	Current	8081	0	0.516858166	0.516858166	0.689080333	0.757088	0.949999833	0.6779176229	50.89%
-B4	ATT_TOT_DQ_DAYS_CYC_RATIO_L6M	2025-03	Current	7851	0	0.517283833	0.528778166	0.689697666	0.7644954995	0.957375375	0.6836204895	162.64%
-B4	ATT_TOT_DQ_DAYS_CYC_RATIO_L6M	2025-04	Current	7473	0	0.517283833	0.5285865	0.689506	0.763452333	0.954950866	0.6811515224	162.57%
-B4	ATT_TOT_DQ_DAYS_CYC_RATIO_L6M	2025-05	Current	7859	0	0.5174755	0.5174755	0.689697666	0.755023333	0.9380417666	0.6730450756	154.91%
-B4	ATT_TOT_DQ_DAYS_CYC_RATIO_L6M	2025-06	Current	8154	0	0.516858166	0.516858166	0.689697666	0.756364333	0.9447849831	0.6769395789	34.48%
-B4	ATT_TOT_DQ_DAYS_CYC_RATIO_L6M	2025-07	Current	8331	0	0.517049833	0.517049833	0.689272	0.762920333	0.955864166	0.6793184718	170.29%
-B4	ATT_TOT_DQ_DAYS_CYC_RATIO_L6M	2025-08	Current	8563	0	0.516858166	0.516858166	0.689272	0.751617666	0.957073283	0.6762295762	37.21%
-B4	ATT_TOT_DQ_DAYS_CYC_RATIO_L6M	2025-09	Current	8806	0	0.516858166	0.516858166	0.689080333	0.750383	0.9429596663	0.6745487081	51.06%
-B4	ATT_TOT_DQ_DAYS_CYC_RATIO_L6M	2025-10	Current	9118	0	0.516858166	0.516858166	0.689272	0.749760458	0.9542145	0.6753157269	31.51%
-B4	ATT_TOT_DQ_DAYS_CYC_RATIO_L6M	2025-11	Current	9527	0	0.516858166	0.516858166	0.689080333	0.750383166	0.955306383	0.6748833071	51.20%
-B4	ALL8154	2024-07	Benchmark	6429	0	1	2	23	23	23	14.30829056	
-B4	ALL8154	2024-08	Benchmark	6484	0	1	2	23	23	23	14.0490438	
-B4	ALL8154	2024-09	Benchmark	6899	0	1	2	23	23	23	14.2585882	
-B4	ALL8154	2024-04	Current	5948	0	1	2	26.5	26.5	26.5	17.57078009	152.66%
-B4	ALL8154	2024-05	Current	6420	0	1	2	26.5	26.5	26.5	16.58637072	145.80%
-B4	ALL8154	2024-06	Current	6528	0	1	2	26.5	26.5	26.5	16.17708333	160.41%
-B4	ALL8154	2024-07	Current	6624	0	1	2	26.5	26.5	26.5	16.34110809	152.16%
-B4	ALL8154	2024-08	Current	6762	0	1	2	26.5	26.5	26.5	16.07860101	158.26%
-B4	ALL8154	2024-09	Current	7148	0	1	2	26.5	26.5	26.5	16.32106883	160.35%
-B4	ALL8154	2024-10	Current	7491	0	1	2	26.5	26.5	26.5	16.30429849	151.73%
-B4	ALL8154	2024-11	Current	7609	0	1	2	26.5	26.5	26.5	16.14082008	144.47%
-B4	ALL8154	2024-12	Current	7719	0	1	2	26.5	26.5	26.5	16.01198342	142.02%
-B4	ALL8154	2025-01	Current	7945	0	1	2	26.5	26.5	26.5	15.97986155	147.68%
-B4	ALL8154	2025-02	Current	8081	0	0	1	26.5	26.5	26.5	14.61081549	218.76%
-B4	ALL8154	2025-03	Current	7851	0	1	2	26.5	26.5	26.5	15.86848809	144.66%
-B4	ALL8154	2025-04	Current	7473	0	1	2	26.5	26.5	26.5	15.69911682	149.01%
-B4	ALL8154	2025-05	Current	7859	0	1	2	26.5	26.5	26.5	15.89534292	158.06%
-B4	ALL8154	2025-06	Current	8154	0	1	2	26.5	26.5	26.5	15.90428011	154.42%
-B4	ALL8154	2025-07	Current	8331	0	1	2	26.5	26.5	26.5	16.14866163	154.09%
-B4	ALL8154	2025-08	Current	8563	0	1	2	26.5	26.5	26.5	15.94312741	150.96%
-B4	ALL8154	2025-09	Current	8806	0	1	2	26.5	26.5	26.5	16.06319555	149.55%
-B4	ALL8154	2025-10	Current	9118	0	1	2	26.5	26.5	26.5	16.23574249	151.88%
-B4	ALL8154	2025-11	Current	9527	0	1	2	26.5	26.5	26.5	16.15949407	146.11%
+def calculate_psi(expected, actual, score_dev, score_act, buckettype='quantiles', buckets=10, axis=0):
+    '''Calculate the PSI (population stability index) across all variables
+    Args:
+       expected: numpy matrix of original values
+       actual: numpy matrix of new values, same size as expected
+       buckettype: type of strategy for creating buckets, bins splits into even splits, quantiles splits into quantile buckets
+       buckets: number of quantiles to use in bucketing variables
+       axis: axis by which variables are defined, 0 for vertical, 1 for horizontal
+    Returns:
+       psi_values: ndarray of psi values for each variable
+    Author:
+       Matthew Burke
+       github.com/mwburke
+       worksofchart.com
+    '''
+    
+    expected_data = expected[~expected[score_dev].isna()][score_dev]
+    actual_data = actual[~actual[score_act].isna()][score_act]
+
+    def psi(expected_array, actual_array, buckets):
+        '''Calculate the PSI for a single variable
+        Args:
+           expected_array: numpy array of original values
+           actual_array: numpy array of new values, same size as expected
+           buckets: number of percentile ranges to bucket the values into
+        Returns:
+           psi_value: calculated PSI value
+        '''
+
+        def scale_range (input, min, max):
+            input += -(np.min(input))
+            input /= np.max(input) / (max - min)
+            input += min
+            return input
+
+
+        breakpoints = np.arange(0, buckets + 1) / (buckets) * 100
+
+        if buckettype == 'bins':
+            breakpoints = scale_range(breakpoints, np.min(expected_array), np.max(expected_array))
+        elif buckettype == 'quantiles':
+            breakpoints = np.stack([np.percentile(expected_array, b) for b in breakpoints])
+
+
+
+        expected_percents = np.histogram(expected_array, breakpoints)[0] / len(expected_array)
+        actual_percents = np.histogram(actual_array, breakpoints)[0] / len(actual_array)
+
+        def sub_psi(e_perc, a_perc):
+            '''Calculate the actual PSI value from comparing the values.
+               Update the actual value to a very small number if equal to zero
+            '''
+            if a_perc == 0:
+                a_perc = 0.0001
+            if e_perc == 0:
+                e_perc = 0.0001
+
+            value = (e_perc - a_perc) * np.log(e_perc / a_perc)
+            return(value)
+        
+
+        psi_value = np.sum(sub_psi(expected_percents[i], actual_percents[i]) for i in range(0, len(expected_percents)))
+
+        return psi_value
+
+    if len(expected_data.shape) == 1:
+        psi_values = np.empty(len(expected_data.shape))
+    else:
+        psi_values = np.empty(expected_data.shape[axis])
+
+    for i in range(0, len(psi_values)):
+        if len(psi_values) == 1:
+            psi_values = psi(expected_data, actual_data, buckets)
+        elif axis == 0:
+            psi_values[i] = psi(expected_data[:,i], actual_data[:,i], buckets)
+        elif axis == 1:
+            psi_values[i] = psi(expected_data[i,:], actual_data[i,:], buckets)
+
+    return(psi_values)
+
+def calculate_psi_by_month(dev, act, score_dev, score_act, date):
+    _ = {}
+    _['volume'] = act.groupby(date).apply(lambda x: len(x[~x[score_act].isna()])).to_dict()
+    _['psi'] = act.groupby(date).apply(lambda x: calculate_psi(dev, x, score_dev, score_act)).to_dict()
+    return pd.DataFrame(_)
+
+def calculate_var_psi_old(dev, act, features, date, yyyymm):
+    data = pd.DataFrame()
+    mon = act[act[date]==yyyymm]
+    for var in features:
+        temp = pd.DataFrame()
+        temp['var'] = [var]
+        temp['psi'] = calculate_psi(dev, mon, var, var)
+        data = pd.concat([data, temp], ignore_index=True)
+    return data
+
+def calculate_psi_categorical(data_ref, data_new, feature, null_value='NULL', special_values=None):
+    """
+    Calculates the Population Stability Index (PSI) for a categorical feature, handling nulls and special values.
+    Args:
+        data_ref (pd.DataFrame): Reference dataset.
+        data_new (pd.DataFrame): New dataset to compare against.
+        feature (str): Name of the categorical feature.
+        null_value (str, optional): Value to represent nulls in the data. Defaults to 'NULL'.
+        special_values (list, optional): List of special values to handle separately. Defaults to None.
+    Returns:
+        float: The PSI value for the given feature.
+    """
+    # Handle nulls and special values
+    ref = data_ref.copy()
+    new = data_new.copy()
+    if special_values != None:
+        ref[feature] = ref[feature].fillna(null_value).replace(special_values, null_value)
+        new[feature] = new[feature].fillna(null_value).replace(special_values, null_value)
+    # Calculate category proportions in reference data
+    ref_counts = ref[feature].value_counts(normalize=True)
+    # Calculate category proportions in new data
+    new_counts = new[feature].value_counts(normalize=True)
+    # Calculate PSI
+    psi = 0
+    for category in set(ref[feature].unique()) | set(new[feature].unique()):
+        ref_prop = ref_counts.get(category, 0)
+        new_prop = new_counts.get(category, 0)
+        psi += (new_prop - ref_prop) * np.log(new_prop / ref_prop) if (ref_prop > 0 and new_prop > 0) else 0
+    return  psi
+
+def calculate_var_psi(dev, act, features, date, yyyymm):
+    data = pd.DataFrame()
+    mon = act[act[date]==yyyymm]
+    for var in features:
+        if var == 'sloppy_ind_d3':
+            temp = pd.DataFrame()
+            temp['var'] = [var]
+            temp['psi'] = calculate_psi_categorical(dev, mon, var,special_values = 60.0 )
+            data = data._append(temp,ignore_index=True)
+            
+        elif var == 'ATT_IS_AUTOPAY':
+            temp = pd.DataFrame()
+            temp['var'] = [var]
+            temp['psi'] = calculate_psi_categorical(dev, mon, var)
+            data = data._append(temp,ignore_index=True)
+        elif var == 'IQF9417':
+            temp = pd.DataFrame()
+            temp['var'] = [var]
+            temp['psi'] = calculate_psi_categorical(dev, mon, var)
+            data = data._append(temp,ignore_index=True)
+        elif var == 'ATT_CONS_NODQ2UP_CNT':
+            temp = pd.DataFrame()
+            temp['var'] = [var]
+            temp['psi'] = calculate_psi_categorical(dev, mon, var)
+            data = data._append(temp,ignore_index=True)
+        elif var == 'ATT_CONS_NODQCNT':
+            temp = pd.DataFrame()
+            temp['var'] = [var]
+            temp['psi'] = calculate_psi_categorical(dev, mon, var)
+            data = data._append(temp,ignore_index=True)
+        elif var == 'REV3517':
+            temp = pd.DataFrame()
+            temp['var'] = [var]
+            temp['psi'] = calculate_psi_categorical(dev, mon, var)
+            data = data._append(temp,ignore_index=True)
+        else:
+            temp = pd.DataFrame()
+            temp['var'] = [var]
+            temp['psi'] = calculate_psi(dev, mon, var, var)
+            data = data._append(temp,ignore_index=True)
+    return data
